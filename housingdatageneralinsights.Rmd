@@ -1,0 +1,89 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(ggplot2)
+library(lubridate)
+df <- read.csv("ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv")
+head(df)
+```
+
+
+```{r}
+#label encode flat type, storey_range, flat_model
+#town
+town_mapping <- levels(factor(df$town))
+df$town <- as.integer(factor(df$town))
+
+#flat_type
+flat_type_mapping <- levels(factor(df$flat_type))
+df$flat_type <- as.integer(factor(df$flat_type))
+
+#storey_range
+storey_range_mapping <- levels(factor(df$storey_range))
+df$storey_range <- as.integer(factor(df$storey_range))
+
+#flat model
+flat_model_mapping <- levels(factor(df$flat_model))
+df$flat_model <- as.integer(factor(df$flat_model))
+```
+
+
+```{r}
+ ggplot(storey_year_avg, aes(x = year, y = avg_price, color = storey_range)) +                   
+    geom_line(linewidth = 0.8) +                                                                  
+    geom_point(size = 1.5) +
+    facet_wrap(~ storey_range) +                                                                  
+    scale_x_continuous(breaks = c(2017, 2020, 2023, 2026)) +
+    scale_y_continuous(labels = scales::comma) +                                                  
+    scale_color_manual(values = colorRampPalette(RColorBrewer::brewer.pal(12,
+  "Paired"))(length(unique(storey_year_avg$storey_range)))) +                                     
+    labs(         
+      title = "Average Resale Price by Storey Range Across Years",                                
+      x     = "Year",                                                                             
+      y     = "Average Resale Price (SGD)"
+    ) +                                                                                           
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      axis.text.x     = element_text(angle = 45, hjust = 1, size = 7),
+      strip.text      = element_text(face = "bold", size = 8),                                    
+      panel.spacing   = unit(1, "lines")
+    ) 
+```
+
+
+```{r}
+  # Add the original flat_model labels back for plotting
+flat_type_labels <- flat_type_mapping[df$flat_type]
+
+#for every combination of flat type and month, we are calculating the average resale price                            
+flat_month_avg <- aggregate(df$resale_price,by = list(month_num = month(ym(df$month)),flat_type = flat_type_labels),FUN = mean)
+names(flat_month_avg) <- c("month_num", "flat_type", "avg_price")                               
+ggplot(flat_month_avg, aes(x = month_num, y = avg_price, fill = flat_type)) +                   
+    geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +            
+    scale_x_continuous(breaks = 1:12) +                                                           
+    scale_y_continuous(labels = scales::comma) +                                                  
+    scale_fill_brewer(palette = "Set2") +                                                         
+    labs(                                                                                         
+      title = "Average Resale Price by Month and Flat Type",
+      x     = "Month",                                                                            
+      y     = "Average Resale Price (SGD)",
+      fill  = "Flat Type"
+    ) +                                                                                           
+    theme_minimal() +
+    theme(legend.position = "top")      
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
