@@ -58,7 +58,7 @@ town_mapping <- levels(factor(df_v1$town))
 df_v1$town <- as.integer(factor(df_v1$town))
 
 #flat_type
-flat_type_mapping <- levels(factor(df$flat_type))
+flat_type_mapping <- levels(factor(df_v1$flat_type))
 df_v1$flat_type <- as.integer(factor(df_v1$flat_type))
 
 #storey_range
@@ -182,10 +182,26 @@ cat("MAE: $",round(mae,2),"\n")
 cat("R^2:",round(r2,4),"\n")
 ```
 ```{r}
+#on average,XGBoost model’s prediction is off by only 3.7% of the actual transaction price.
 cat("MAE as % of mean price:",round(mae / mean(y_test) * 100, 2),"%\n")
 ```
 ```{r}
+#feature importance:
+#feature importance matrix
+importance_matrix <- xgb.importance(feature_names = colnames(X_train_mat), model = xgbreg_model)
 
+library(ggplot2)
+
+#ggplot needs df
+imp_df <- as.data.frame(importance_matrix)
+
+ggplot(imp_df, aes(x = reorder(Feature, Gain), y = Gain)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "HDB Price Drivers: Information Gain",
+       x = "Features",
+       y = "Information Gain (Contribution to Accuracy)") +
+  theme_minimal()
 ```
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
