@@ -126,7 +126,7 @@ tail(train_df_v1)
  
 ```{r}
 #feature selection
-features <- c('town','flat_type','floor_area_sqm','storey_range','flat_model','remaining_lease','time_index','month_num','street_avg_price')
+features <- c('town', 'flat_type','floor_area_sqm','storey_range','flat_model','remaining_lease','time_index','month_num','street_avg_price')
 #train and test datasets to work with for modeling
 X_train = train_df_v1[,features]
 y_train = train_df_v1$resale_price
@@ -135,9 +135,42 @@ X_test = test_df_v1[,features]
 y_test =test_df_v1$resale_price
 ```
 
-```{r}
+```{r `}
 head(X_train)
+
+TS <- cbind(X_train, resale_price = y_train)
+#Training linear regression model
+model <- glm(resale_price ~ ., data=TS)
+
+pred = predict.glm(model, newdata=X_test)
+
+mae = mean(abs(y_test - pred))
+
+res_ss <- sum((y_test-pred)^2)
+
+#R square value
+r2 <- 1-res_ss/sum((y_test-mean(y_test))^2)
+
+mae
+r2
 ```
+
+
+Full features: mae = 61870.91, r^2 = 0.8020927
+No "town" feature: mae = 62594.14, r^2 = 0.7978309
+No "flat type" feature: mae = 62624.04, r^2 = 0.7991103
+No "floor area" feature: mae = 62750.29, r^2 = 0.7922978
+No "storey_range" feature: mae = 66789.5, r^2 = 0.7665248
+No "flat_model" feature: mae = 61878.87, r^2 = 0.8020082
+No "remaining_lease" feature: mae = 62225.7, r^2 = 0.7987987
+No "time_index" feature: mae = 88148.8, r^2 = 0.639285
+No "month_num" feature: mae = 61869.74, r^2 = 0.8020766
+No "street_avg_price" feature: mae = 79822.18, r^2 = 0.6748059
+
+Surprisingly, seems like time index has the biggest impact and not street average price. 
+
+
+
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
 
