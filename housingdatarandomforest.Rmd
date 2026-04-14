@@ -139,9 +139,8 @@ y_test =test_df_v1$resale_price
 head(X_train)
 ```
 ```{r}
-# Random forests are computationally expensive on ~180k rows.
-# A random subsample of 50,000 rows is used for both CV tuning and final model training.
-# The test set remains the full held-out set for unbiased evaluation.
+#random forests are computationally expensive on ~180k rows
+#a random subsample of 50,000 rows is used for both CV tuning and final model training.
 set.seed(42)
 sub_idx     <- sample(nrow(X_train), 50000)
 X_train_sub <- X_train[sub_idx, ]
@@ -156,13 +155,13 @@ library(randomForest)
 
 set.seed(42)
 
-# Combine subsampled features and target for caret
+# combine subsampled features and target for caret
 train_rf <- cbind(X_train_sub, resale_price = y_train_sub)
 
 # 5-fold cross-validation control
 tc <- trainControl(method = "cv", number = 5)
 
-# Tune mtry (number of features tried at each split) via 5-fold CV
+# tune mtry (number of features tried at each split) via 5-fold CV
 # ntree = 100 balances runtime with result stability
 mtry_grid <- expand.grid(mtry = c(3, 6, 9))
 
@@ -181,7 +180,7 @@ cat("Best mtry from 5-fold CV:", rf_cv_model$bestTune$mtry, "\n")
 ```
 
 ```{r}
-# Fit final random forest on the subsample using the best mtry from CV
+#fit final random forest on the subsample using the best mtry from CV
 set.seed(42)
 rf_model <- randomForest(
   x          = X_train_sub,
@@ -191,13 +190,10 @@ rf_model <- randomForest(
   importance = TRUE
 )
 
-# Predict on held-out test set
 rf_pred <- predict(rf_model, newdata = X_test)
 
-# Mean Absolute Error (MAE)
 mae <- mean(abs(y_test - rf_pred))
 
-# R-squared (R²)
 res_ss <- sum((y_test - rf_pred)^2)
 r2     <- 1 - res_ss / sum((y_test - mean(y_test))^2)
 
@@ -207,7 +203,7 @@ cat("R²:  ", round(r2, 4), "\n")
 
 
 ```{r}
-# Extract Mean Decrease in Impurity (node impurity / Gini-based importance)
+#extract mean decrease in impurity
 importance_values <- importance(rf_model, type = 2)
 
 importance_df <- data.frame(
@@ -215,7 +211,7 @@ importance_df <- data.frame(
   MeanDecreaseImpurity = importance_values[, 1]
 )
 
-# Sort descending
+#sort descending
 importance_df <- importance_df[order(importance_df$MeanDecreaseImpurity,
                                      decreasing = TRUE), ]
 print(importance_df)
