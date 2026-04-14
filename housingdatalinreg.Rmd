@@ -126,7 +126,7 @@ tail(train_df_v1)
  
 ```{r}
 #feature selection
-features <- c('town', 'flat_type','floor_area_sqm','storey_range','flat_model','time_index','month_num','street_avg_price')
+features <- c('town', 'flat_type','floor_area_sqm','storey_range','remaining_lease','flat_model','time_index','month_num','street_avg_price')
 #train and test datasets to work with for modeling
 X_train = train_df_v1[,features]
 y_train = train_df_v1$resale_price
@@ -176,9 +176,9 @@ No "floor area" feature: mae = 51623.8, r^2 = 0.8679781
 No "storey_range" feature: mae = 52941.51, r^2 = 0.861733
 No "flat_model" feature: mae = 51073.7, r^2 = 0.8705537
 No "remaining_lease" feature: mae = 54760.06, r^2 = 0.8510301
-No "time_index" feature: mae = 84313.4, r^2 = 0.6853874
-No "month_num" feature: mae = 54774.66, r^2 = 0.8509914
-No "street_avg_price" feature: mae = 61708.92, r^2 = 0.8140576
+No "time_index" feature: mae = 84341.5, r^2 = 0.6919324
+No "month_num" feature: mae = 49364.24, r^2 = 0.8800968
+No "street_avg_price" feature: mae = 52291.91, r^2 = 0.8672024
 
 Time index has the biggest impact by a large margin
 
