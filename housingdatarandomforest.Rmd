@@ -138,6 +138,103 @@ y_test =test_df_v1$resale_price
 ```{r}
 head(X_train)
 ```
+```{r}
+# Random forests are computationally expensive on ~180k rows.
+# A random subsample of 50,000 rows is used for both CV tuning and final model training.
+# The test set remains the full held-out set for unbiased evaluation.
+set.seed(42)
+sub_idx     <- sample(nrow(X_train), 50000)
+X_train_sub <- X_train[sub_idx, ]
+y_train_sub <- y_train[sub_idx]
+
+cat("Subsample size:", nrow(X_train_sub), "\n")
+cat("Test set size: ", nrow(X_test), "\n")
+```
+``` {r}
+library(caret)
+library(randomForest)
+
+set.seed(42)
+
+# Combine subsampled features and target for caret
+train_rf <- cbind(X_train_sub, resale_price = y_train_sub)
+
+# 5-fold cross-validation control
+tc <- trainControl(method = "cv", number = 5)
+
+# Tune mtry (number of features tried at each split) via 5-fold CV
+# ntree = 100 balances runtime with result stability
+mtry_grid <- expand.grid(mtry = c(3, 6, 9))
+
+rf_cv_model <- train(
+  resale_price ~ .,
+  data       = train_rf,
+  method     = "rf",
+  trControl  = tc,
+  tuneGrid   = mtry_grid,
+  ntree      = 100,
+  importance = TRUE
+)
+
+print(rf_cv_model)
+cat("Best mtry from 5-fold CV:", rf_cv_model$bestTune$mtry, "\n")
+```
+
+```{r}
+# Fit final random forest on the subsample using the best mtry from CV
+set.seed(42)
+rf_model <- randomForest(
+  x          = X_train_sub,
+  y          = y_train_sub,
+  ntree      = 100,
+  mtry       = rf_cv_model$bestTune$mtry,
+  importance = TRUE
+)
+
+# Predict on held-out test set
+rf_pred <- predict(rf_model, newdata = X_test)
+
+# Mean Absolute Error (MAE)
+mae <- mean(abs(y_test - rf_pred))
+
+# R-squared (R²)
+res_ss <- sum((y_test - rf_pred)^2)
+r2     <- 1 - res_ss / sum((y_test - mean(y_test))^2)
+
+cat("MAE:  SGD", round(mae, 2), "\n")
+cat("R²:  ", round(r2, 4), "\n")
+```
+
+
+```{r}
+# Extract Mean Decrease in Impurity (node impurity / Gini-based importance)
+importance_values <- importance(rf_model, type = 2)
+
+importance_df <- data.frame(
+  Feature              = rownames(importance_values),
+  MeanDecreaseImpurity = importance_values[, 1]
+)
+
+# Sort descending
+importance_df <- importance_df[order(importance_df$MeanDecreaseImpurity,
+                                     decreasing = TRUE), ]
+print(importance_df)
+```
+
+```{r}
+# Horizontal bar chart of feature importance
+par(mar = c(5, 10, 4, 2))   # widen left margin for feature labels
+barplot(
+  rev(importance_df$MeanDecreaseImpurity),
+  names.arg = rev(importance_df$Feature),
+  horiz     = TRUE,
+  las       = 1,
+  col       = "steelblue",
+  main      = "Random Forest Feature Importance (Mean Decrease in Impurity)",
+  xlab      = "Mean Decrease in Impurity"
+)
+```
+
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
 
