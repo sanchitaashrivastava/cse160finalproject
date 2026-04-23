@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: General Insights
 output: html_notebook
 ---
 
@@ -14,6 +14,64 @@ df <- read.csv("ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv")
 head(df)
 ```
 
+```{r}
+library(ggplot2)
+library(scales)
+
+#calculate the five-number summary for the box plot (excluding outliers)
+bp_stats <- boxplot.stats(df$floor_area_sqm)$stats
+
+#box plot
+ggplot(df, aes(x = floor_area_sqm, y = "")) + 
+  geom_boxplot(fill = "steelblue", color = "darkblue", outlier.color = "red", outlier.size = 2) + 
+  
+  #text labels for the statistics
+  geom_text(data = data.frame(x = bp_stats, y = ""), 
+            aes(x = x, y = y, label = x), 
+            vjust = -2, size = 4, fontface = "bold", color = "black") +
+  labs(
+    title = "Distribution of Floor Area in HDB Resale Flats",
+    subtitle = "Numbers represent the min, 25th percentile, median, 75th percentile, and max (excluding outliers)",
+    x = "Floor Area (Square Meters)",
+    y = ""
+  ) + 
+  theme_minimal() + 
+  theme(
+    axis.text.y = element_blank(), 
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank()
+  )
+```
+```{r}
+library(ggplot2)
+library(scales)
+
+#calculate the five-number summary for the box plot (excluding outliers)
+bp_stats_price <- boxplot.stats(df$resale_price)$stats
+
+#box plot
+ggplot(df, aes(x = resale_price, y = "")) + 
+  geom_boxplot(fill = "forestgreen", color = "darkgreen", outlier.color = "red", outlier.size = 2) + 
+  
+  #text labels and format them as currency so they are readable
+  geom_text(data = data.frame(x = bp_stats_price, y = ""), 
+            aes(x = x, y = y, label = dollar(x)), 
+            vjust = -2, size = 3.5, fontface = "bold", color = "black") +
+            
+  scale_x_continuous(labels = comma) +
+  labs(
+    title = "Distribution of HDB Resale Prices",
+    subtitle = "Numbers represent the min, 25th percentile, median, 75th percentile, and max",
+    x = "Resale Price (SGD)",
+    y = ""
+  ) + 
+  theme_minimal() + 
+  theme(
+    axis.text.y = element_blank(), 
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank()
+  )
+```
 
 ```{r}
 #label encode flat type, storey_range, flat_model
@@ -34,51 +92,103 @@ flat_model_mapping <- levels(factor(df$flat_model))
 df$flat_model <- as.integer(factor(df$flat_model))
 ```
 
-
 ```{r}
- ggplot(storey_year_avg, aes(x = year, y = avg_price, color = storey_range)) +                   
-    geom_line(linewidth = 0.8) +                                                                  
-    geom_point(size = 1.5) +
-    facet_wrap(~ storey_range) +                                                                  
-    scale_x_continuous(breaks = c(2017, 2020, 2023, 2026)) +
-    scale_y_continuous(labels = scales::comma) +                                                  
-    scale_color_manual(values = colorRampPalette(RColorBrewer::brewer.pal(12,
-  "Paired"))(length(unique(storey_year_avg$storey_range)))) +                                     
-    labs(         
-      title = "Average Resale Price by Storey Range Across Years",                                
-      x     = "Year",                                                                             
-      y     = "Average Resale Price (SGD)"
-    ) +                                                                                           
-    theme_minimal() +
-    theme(
-      legend.position = "none",
-      axis.text.x     = element_text(angle = 45, hjust = 1, size = 7),
-      strip.text      = element_text(face = "bold", size = 8),                                    
-      panel.spacing   = unit(1, "lines")
-    ) 
+library(dplyr)
+library(lubridate)
+
+#convert text to date format
+df$month_date <- ym(df$month) 
+
+#summary table
+storey_year_avg <- df %>%
+  mutate(year = year(month_date)) %>%
+  group_by(year, storey_range) %>%
+  summarise(avg_price = mean(resale_price, na.rm = TRUE),.groups = 'drop')
+
+#convert storey_range back to labels for the plot
+storey_year_avg$storey_range <- factor(storey_year_avg$storey_range, 
+                                       levels = 1:length(storey_range_mapping), 
+                                       labels = storey_range_mapping)
 ```
 
 
 ```{r}
-  # Add the original flat_model labels back for plotting
-flat_type_labels <- flat_type_mapping[df$flat_type]
+#average resale price trend
 
-#for every combination of flat type and month, we are calculating the average resale price                            
-flat_month_avg <- aggregate(df$resale_price,by = list(month_num = month(ym(df$month)),flat_type = flat_type_labels),FUN = mean)
-names(flat_month_avg) <- c("month_num", "flat_type", "avg_price")                               
-ggplot(flat_month_avg, aes(x = month_num, y = avg_price, fill = flat_type)) +                   
-    geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +            
-    scale_x_continuous(breaks = 1:12) +                                                           
-    scale_y_continuous(labels = scales::comma) +                                                  
-    scale_fill_brewer(palette = "Set2") +                                                         
-    labs(                                                                                         
-      title = "Average Resale Price by Month and Flat Type",
-      x     = "Month",                                                                            
-      y     = "Average Resale Price (SGD)",
-      fill  = "Flat Type"
-    ) +                                                                                           
+library(dplyr)
+library(ggplot2)
+library(scales)
+
+#list of all the unique storey ranges
+unique_storeys <- unique(storey_year_avg$storey_range)
+
+#we loop through each storey range and create an individual plot
+individual_plots <- lapply(unique_storeys, function(current_storey) {
+  
+  #filter dataset for just this specific storey range
+  plot_data <- storey_year_avg %>% filter(storey_range == current_storey)
+  
+  #line graph
+  p <- ggplot(plot_data, aes(x = year, y = avg_price)) +                    
+    geom_line(color = "steelblue", linewidth = 1) +                                                                
+    geom_point(color = "darkblue", size = 2) +
+    
+    #price labels per point (formatted as $XXXk)
+    geom_text(aes(label = paste0("$", round(avg_price/1000, 0), "k")), 
+              vjust = -1.2, size = 3.5, fontface = "bold", color = "black") +
+    
+    #vertical space so the text doesn't get cut off at the top
+    scale_y_continuous(labels = scales::comma, expand = expansion(mult = c(0.1, 0.2))) +                                                                      
+    scale_x_continuous(breaks = seq(min(plot_data$year), max(plot_data$year), by = 1)) +
+    
+    labs(          
+      #able to dynamoically set the title so we know which storey range we are looking at
+      title = paste("Average Resale Price Trend - Storey Range:", current_storey),                                
+      x     = "Year",                                                                        
+      y     = "Average Resale Price (SGD)"
+    ) +                                                                                      
     theme_minimal() +
-    theme(legend.position = "top")      
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+      plot.title = element_text(face = "bold", size = 14)
+    )
+  
+  return(p)
+})
+
+#1,2,3,4 : we focus from floors 1-12
+print(individual_plots[[4]])
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+
+#summary table for Year-on-Year data
+flat_year_avg <- df %>%
+  mutate(year = year(ym(month))) %>%
+  group_by(year, flat_type) %>%
+  summarise(avg_price = mean(resale_price, na.rm = TRUE), .groups = 'drop') %>%
+  #map labels back to the flat_type integers
+  mutate(flat_type_label = flat_type_mapping[flat_type])
+
+ggplot(flat_year_avg, aes(x = factor(year), y = avg_price, group = flat_type_label, color = flat_type_label)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  #to show numbers on chart
+  geom_text(aes(label = paste0("$", round(avg_price/1000, 0), "k")), 
+            vjust = -1, size = 3, fontface = "bold", show.legend = FALSE) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0.1, 0.2))) +
+  labs(
+    title = "Year-on-Year Average Resale Price by Flat Type",
+    subtitle = "Prices labeled in thousands (k)",
+    x = "Year",
+    y = "Average Resale Price (SGD)",
+    color = "Flat Type"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 ```
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
