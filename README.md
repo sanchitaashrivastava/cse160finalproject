@@ -8,7 +8,7 @@
 
 ## Overview
 
-This project investigates whether historical transaction data can accurately predict resale flat prices in Singapore's public housing market (HDB). Using data from the Housing & Development Board covering January 2017 to the present, we built and compared three regression models — Linear Regression, Random Forest, and XGBoost — following the CRISP-DM framework.
+This project investigates whether historical transaction data can accurately predict resale flat prices in Singapore's public housing market (HDB). Using data from the Housing & Development Board covering January 2017 to the March 2026, we built and compared three regression models — Linear Regression, Random Forest, and XGBoost — following the CRISP-DM framework.
 
 The best model (XGBoost) achieved an **R² of 0.978** and a **Mean Absolute Error of SGD $19,537.76**, meaning predictions are off by only ~3.7% of the average transaction price on average.
 
